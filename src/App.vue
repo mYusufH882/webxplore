@@ -23,9 +23,6 @@
 
       <!-- Panel FileList -->
       <div class="lg:w-3/4 w-full p-4 lg:h-full overflow-y-auto">
-        <div v-if="!selectedFolder" class="mb-4">
-          <h2 class="text-xl font-semibold text-gray-800 mb-2">Home</h2>
-        </div>
         <div v-if="selectedFolder && parentFolder" class="mb-4">
           <h2 class="text-xl font-semibold text-gray-800 mb-2">
             {{ parentFolder.name }} > {{ selectedFolder.name }}
@@ -54,9 +51,7 @@
               class="bg-white text-center p-4 rounded-lg shadow-md border border-gray-200"
             >
               <div>
-                <p class="font-medium text-blue-600">
-                  {{ file.name }}
-                </p>
+                <p class="font-medium text-blue-600">{{ file.name }}</p>
                 <p class="text-gray-500 text-sm">({{ file.mime_type }}, {{ file.size }} bytes)</p>
               </div>
             </li>
@@ -81,46 +76,20 @@
               </li>
             </ul>
           </div>
-
-          <p v-else class="text-gray-600 mt-5">
-            <small>Select a folder to view its contents.</small>
-          </p>
         </div>
 
-        <!-- ModalBox for Adding a Folder -->
-        <ModalBox :visible="showModal" title="Add New Folder" @close="showModal = false">
-          <form @submit.prevent="addFolder">
-            <div class="mb-4">
-              <label for="folderName" class="block text-gray-700 mb-2">Folder Name:</label>
-              <input
-                id="folderName"
-                v-model="newFolderName"
-                type="text"
-                class="border border-gray-300 p-2 rounded-lg w-full"
-                required
-              />
-            </div>
-            <div class="mb-4">
-              <label for="parentFolder" class="block text-gray-700">Folder</label>
-              <select
-                v-model="selectedFolderId"
-                id="parentFolder"
-                class="border border-gray-300 p-2 rounded-lg w-full"
-              >
-                <option v-for="folder in folders" :key="folder.id" :value="folder.id">
-                  {{ folder.name }}
-                </option>
-              </select>
-            </div>
-            <div class="flex justify-end">
-              <button
-                type="submit"
-                class="px-4 py-2 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600"
-              >
-                Add Folder
-              </button>
-            </div>
-          </form>
+        <!-- ModalBox for Adding/Editing a Folder -->
+        <ModalBox
+          :visible="showModal"
+          :title="isEdit ? 'Edit Folder' : 'Add New Folder'"
+          @close="showModal = false"
+        >
+          <FolderForm
+            :folders="folders"
+            :folderData="formFolderData"
+            :isEdit="isEdit"
+            @submit="handleFormSubmit"
+          />
         </ModalBox>
       </div>
     </div>
@@ -130,20 +99,23 @@
 <script>
 import FolderTree from './components/FolderTree.vue'
 import ModalBox from './components/ModalBox.vue'
+import FolderForm from './components/FolderForm.vue'
 
 export default {
   components: {
     FolderTree,
-    ModalBox
+    ModalBox,
+    FolderForm
   },
   data() {
     return {
       folders: [],
       selectedFolder: null,
       showModal: false,
-      newFolderName: '',
-      selectedFolderId: null,
-      parentFolder: null
+      formFolderData: null,
+      isEdit: false,
+      parentFolder: null,
+      isSubmitting: false
     }
   },
   mounted() {
@@ -166,36 +138,118 @@ export default {
       }
     },
     handleFolderSelect(folder) {
-      if (folder) {
-        this.selectedFolder = folder
-        this.selectedFolderId = folder.id
-        this.parentFolder = this.folders.find((parent) => parent.id === folder.parent_id)
-      } else {
-        this.selectedFolder = null
-        this.parentFolder = null
-      }
+      this.selectedFolder = folder
+      this.parentFolder = this.folders.find((parent) => parent.id === folder.parent_id) || null
     },
     openAddFolderModal() {
+      this.formFolderData = null
+      this.isEdit = false
       this.showModal = true
     },
-    addFolder() {
-      console.log('Adding folder:', this.newFolderName)
-      this.showModal = false
-      this.newFolderName = ''
-      this.fetchFolders()
+    async handleFormSubmit(form) {
+      if (this.isSubmitting) return
+      this.isSubmitting = true
+
+      try {
+        if (this.isEdit) {
+          await this.$apiClient
+            .put(`/folders/${this.formFolderData.id}`, {
+              name: form.name,
+              parent_id: form.parent_id
+            })
+            .then((response) => {
+              console.log('Folder updated successfully:', response.data)
+
+              const updatedFolder = response.data.data
+
+              if (this.selectedFolder) {
+                // Jika subfolder diperbarui
+                if (Array.isArray(this.selectedFolder.subfolders)) {
+                  const subfolderIndex = this.selectedFolder.subfolders.findIndex(
+                    (subfolder) => subfolder.id === updatedFolder.id
+                  )
+
+                  if (subfolderIndex !== -1) {
+                    this.$set(this.selectedFolder.subfolders, subfolderIndex, updatedFolder)
+                  }
+                }
+
+                // Jika folder yang diperbarui adalah folder yang dipilih
+                if (this.selectedFolder.id === updatedFolder.id) {
+                  this.selectedFolder.name = updatedFolder.name
+
+                  // Update juga parentFolder jika ada
+                  if (this.parentFolder) {
+                    const folderIndex = this.parentFolder.subfolders.findIndex(
+                      (subfolder) => subfolder.id === updatedFolder.id
+                    )
+                    if (folderIndex !== -1) {
+                      this.$set(this.parentFolder.subfolders, folderIndex, updatedFolder)
+                    }
+                  }
+                }
+              }
+
+              this.showModal = false
+              this.fetchFolders()
+            })
+            .catch((error) => {
+              console.error('Error updating folder:', error)
+            })
+        } else {
+          await this.$apiClient
+            .post('/folders', {
+              name: form.name,
+              parent_id: form.parent_id
+            })
+            .then((response) => {
+              console.log('Folder created successfully:', response.data)
+              this.showModal = false
+              this.fetchFolders()
+            })
+        }
+        this.showModal = false
+        this.fetchFolders()
+      } catch (error) {
+        console.error('Error in handleFormSubmit:', error)
+      } finally {
+        this.isSubmitting = false
+      }
     },
     editFolder(folder) {
-      console.log('Editing : ', folder.name)
-
+      this.formFolderData = folder
+      this.isEdit = true
       this.showModal = true
-      this.newFolderName = folder.name
-      this.selectedFolderId = folder.parent_id || ''
     },
-    deleteFolder(folder) {
-      console.log('Deleting : ', folder.name)
-
+    async deleteFolder(folder) {
       if (confirm(`Apakah anda ingin menghapus folder ${folder.name} ?`)) {
-        this.folders = this.folders.filter((f) => f.id !== folder.id)
+        try {
+          await this.$apiClient
+            .delete(`/folders/${folder.id}`)
+            .then(() => {
+              console.log(`Folder ${folder.name} deleted successfully`)
+
+              if (this.selectedFolder && this.selectedFolder.id === folder.id) {
+                this.selectedFolder = null
+                this.parentFolder = null
+              }
+
+              this.folders = this.folders.filter((f) => f.id !== folder.id)
+
+              if (this.selectedFolder && Array.isArray(this.selectedFolder.subfolders)) {
+                this.selectedFolder.subfolders = this.selectedFolder.subfolders.filter(
+                  (subfolder) => subfolder.id !== folder.id
+                )
+              }
+
+              this.fetchFolders()
+            })
+            .catch((error) => {
+              console.error(`Error deleting folder ${folder.name}:`, error)
+            })
+        } catch (error) {
+          console.error('Error in deleteFolder:', error)
+        }
       }
     }
   }

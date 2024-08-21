@@ -64,7 +64,7 @@ export default {
   },
   data() {
     return {
-      activeFolder: null // To manage which dropdown is open
+      activeFolder: null
     }
   },
   methods: {
