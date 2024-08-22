@@ -12,44 +12,6 @@
     </nav>
 
     <!-- Main Content -->
-    <!-- <div class="flex flex-grow"> -->
-    <!-- Sidebar Panel -->
-    <!-- <div
-        class="lg:w-1/4 md:w-1/4 w-full bg-gray-100 p-4 lg:h-full md:h-full overflow-y-auto fixed lg:relative"
-      >
-        <FolderTree
-          :folders="folders"
-          :selectedFolder="selectedFolder"
-          @select-folder="handleFolderSelect"
-          @deleteFolder="deleteFolder"
-          @editFolder="editFolder"
-        />
-      </div> -->
-
-    <!-- Panel FileList -->
-    <!-- <div class="lg:ml-1/4 md:ml-1/4 mr-0 flex-grow p-4 lg:h-full overflow-y-auto">
-        <FileList
-          :selectedFolder="selectedFolder"
-          :parentFolder="parentFolder"
-          @select-folder="handleFolderSelect"
-          @edit-folder="editFolder"
-          @delete-folder="deleteFolder"
-        />
-      </div> -->
-
-    <ModalBox
-      :visible="showModal"
-      :title="isEdit ? 'Edit Folder' : 'Add new Folder'"
-      @close="showModal = false"
-    >
-      <FolderForm
-        :folders="folders"
-        :folderData="formFolderData"
-        :isEdit="isEdit"
-        @submit="handleFormSubmit"
-      />
-    </ModalBox>
-    <!-- </div> -->
     <div class="flex-grow flex flex-col lg:flex-row">
       <!-- Sidebar Panel -->
       <div
@@ -75,6 +37,19 @@
         />
       </div>
     </div>
+
+    <ModalBox
+      :visible="showModal"
+      :title="isEdit ? 'Edit Folder' : 'Add new Folder'"
+      @close="showModal = false"
+    >
+      <FolderForm
+        :folders="folders"
+        :folderData="formFolderData"
+        :isEdit="isEdit"
+        @submit="handleFormSubmit"
+      />
+    </ModalBox>
   </div>
 </template>
 
