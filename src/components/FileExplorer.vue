@@ -28,6 +28,31 @@
 
       <!-- Panel FileList -->
       <div class="lg:w-3/4 md:w-3/4 w-full p-4 ml-auto lg:mt-0">
+        <div v-if="!parentFolder">
+          <h3 class="text-xl font-semibold text-gray-800 mb-2">{{ selectedFolder.name }}</h3>
+          <p v-if="selectedFolder && selectedFolder.subfolders && selectedFolder.subfolders.length">
+            <ul class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 gap-2">
+                <li
+                v-for="subfolder in selectedFolder.subfolders"
+                :key="subfolder.id"
+                class="bg-white text-center p-4 rounded-lg shadow-md border border-gray-200"
+                >
+                <div>
+                    <p class="font-medium text-blue-600">{{ subfolder.name }}</p>
+                </div>
+                </li>
+            </ul>
+          </p>
+          <p
+            v-else-if="
+              !selectedFolder.files || !selectedFolder.subfolders || !selectedFolder.folders
+            "
+            class="text-gray-600 my-5"
+          >
+            <small>No content in here.</small>
+          </p>
+        </div>
+
         <FileList
           :selectedFolder="selectedFolder"
           :parentFolder="parentFolder"
@@ -84,7 +109,12 @@ export default {
   methods: {
     handleFolderSelect(folder) {
       this.selectedFolder = folder
-      this.parentFolder = this.folders.find((parent) => parent.id === folder.parent_id) || null
+      this.parentFolder =
+        // this.folders.find((parent) => parent.id === folder.parent_id) ||
+        this.findParentFolder(folder)
+    },
+    findParentFolder(folder) {
+      return this.folders.find((f) => f.id === folder.parent_id) || null
     },
     openAddFolderModal() {
       this.formFolderData = null

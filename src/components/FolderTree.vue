@@ -44,6 +44,7 @@
             </div>
           </div>
           <span
+            @click="selectFolder(folder)"
             :class="{ 'font-bold': selectedFolder && selectedFolder.id === folder.id }"
             class="text-blue-400 mr-auto"
           >
