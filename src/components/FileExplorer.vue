@@ -28,19 +28,39 @@
 
       <!-- Panel FileList -->
       <div class="lg:w-3/4 md:w-3/4 w-full p-4 ml-auto lg:mt-0">
-        <div v-if="!parentFolder">
-          <h3 class="text-xl font-semibold text-gray-800 mb-2">{{ selectedFolder.name }}</h3>
+        <div v-if="selectedFolder">
+          <h3 class="text-xl font-semibold text-gray-800 mb-2">
+            {{ parentFolder?.name }} > {{ selectedFolder.name }}
+            <button 
+            @click="openAddFolderModal('add', subfolder)"
+            class="ml-2 bg-blue-500 text-white px-1 py-0.5 text-sm rounded shadow hover:bg-blue-600">
+              Add
+            </button>
+            <button
+              @click="editFolder(selectedFolder)"
+              class="ml-2 bg-yellow-500 text-white px-1 py-0.5 text-sm rounded shadow hover:bg-yellow-600"
+            >
+              Edit
+            </button>
+            <button
+              @click="deleteFolder(selectedFolder)"
+              class="ml-2 bg-red-500 text-white px-1 py-0.5 text-sm rounded shadow hover:bg-red-600"
+            >
+              Delete
+            </button>
+          </h3>
           <p v-if="selectedFolder && selectedFolder.subfolders && selectedFolder.subfolders.length">
-            <ul class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 gap-2">
-                <li
-                v-for="subfolder in selectedFolder.subfolders"
-                :key="subfolder.id"
-                class="bg-white text-center p-4 rounded-lg shadow-md border border-gray-200"
-                >
+            <ul class="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-4 gap-4 mt-5">
+              <li v-for="subfolder in selectedFolder.subfolders" :key="subfolder.id" class="bg-white text-center p-4 rounded-lg shadow-md border border-gray-200">
                 <div>
-                    <p class="font-medium text-blue-600">{{ subfolder.name }}</p>
+                  <a 
+                    @click="handleFolderSelect(subfolder)" 
+                    class="font-medium text-blue-600 cursor-pointer"
+                  >
+                    {{ subfolder.name }}
+                  </a>
                 </div>
-                </li>
+              </li>
             </ul>
           </p>
           <p
@@ -49,7 +69,7 @@
             "
             class="text-gray-600 my-5"
           >
-            <small>No content in here.</small>
+            <small>No subfolder in this folder.</small>
           </p>
         </div>
 
