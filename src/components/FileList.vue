@@ -12,6 +12,7 @@
               <img :src="file.path" :alt="file.name" class="max-h-40 w-auto mx-auto mb-2" />
             </div> -->
           <div>
+            <font-awesome-icon :icon="['fas', 'file']" />
             <p class="font-medium text-blue-600">{{ file.name }}</p>
             <p class="text-gray-500 text-sm">({{ file.mime_type }}, {{ file.size }} bytes)</p>
           </div>
