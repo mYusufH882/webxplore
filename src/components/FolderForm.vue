@@ -18,7 +18,7 @@
         class="border border-gray-300 p-2 rounded-lg w-full"
       >
         <option :value="null">Pilih</option>
-        <option v-for="folder in folders" :key="folder.id" :value="folder.id">
+        <option v-for="folder in flattenedFolders" :key="folder.id" :value="folder.id">
           {{ folder.name }}
         </option>
       </select>
@@ -50,6 +50,21 @@ export default {
       }
     }
   },
+  computed: {
+    flattenedFolders() {
+      const flatten = (folders, parentName = '') => {
+        return folders.reduce((acc, folder) => {
+          const fullName = parentName ? `${parentName} / ${folder.name}` : folder.name;
+          acc.push({ ...folder, name: fullName });
+          if (folder.subfolders && folder.subfolders.length) {
+            acc.push(...flatten(folder.subfolders, fullName));
+          }
+          return acc;
+        }, []);
+      };
+      return flatten(this.folders);
+    }
+  },
   watch: {
     folderData: {
       immediate: true,
@@ -63,7 +78,12 @@ export default {
   },
   methods: {
     handleSubmit() {
-      this.$emit('submit', { ...this.form })
+      const folderData = {...this.form};
+
+      this.$emit('submit', folderData)
+    
+      this.form.name = ''
+      this.form.parent_id = null
     }
   }
 }

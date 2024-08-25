@@ -32,7 +32,7 @@
           <h3 class="text-xl font-semibold text-gray-800 mb-2">
             {{ parentFolder?.name }} > {{ selectedFolder.name }}
             <button 
-            @click="openAddFolderModal('add', subfolder)"
+            @click="openAddFolderModal('add', parentFolder)"
             class="ml-2 bg-blue-500 text-white px-1 py-0.5 text-sm rounded shadow hover:bg-blue-600">
               Add
             </button>
@@ -51,12 +51,13 @@
           </h3>
           <p v-if="selectedFolder && selectedFolder.subfolders && selectedFolder.subfolders.length">
             <ul class="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-4 gap-4 mt-5">
-              <li v-for="subfolder in selectedFolder.subfolders" :key="subfolder.id" class="bg-white text-center p-4 rounded-lg shadow-md border border-gray-200">
+              <li v-for="subfolder in selectedFolder.subfolders" :key="subfolder.id" class="bg-white text-center p-2 rounded-lg shadow-md border border-gray-200">
                 <div>
                   <a 
                     @click="handleFolderSelect(subfolder)" 
                     class="font-medium text-blue-600 cursor-pointer"
                   >
+                  <font-awesome-icon :icon="['fas', 'folder']" />
                     {{ subfolder.name }}
                   </a>
                 </div>
@@ -129,15 +130,21 @@ export default {
   methods: {
     handleFolderSelect(folder) {
       this.selectedFolder = folder
-      this.parentFolder =
-        // this.folders.find((parent) => parent.id === folder.parent_id) ||
-        this.findParentFolder(folder)
+      this.parentFolder = this.findParentFolder(folder)
     },
     findParentFolder(folder) {
       return this.folders.find((f) => f.id === folder.parent_id) || null
     },
-    openAddFolderModal() {
-      this.formFolderData = null
+    openAddFolderModal(mode, folder) {
+      if(mode == "add") {
+        this.formFolderData = {
+          name: '',
+          parent_id: folder ? folder.id : null,
+        };
+      } else {
+        this.formFolderData = null
+      }
+
       this.isEdit = false
       this.showModal = true
     },
