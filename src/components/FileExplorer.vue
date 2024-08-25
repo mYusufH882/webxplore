@@ -127,6 +127,7 @@ export default {
   data() {
     return {
       folders: [],
+      deleteFolderAction: null,
       selectedFolder: null,
       showModal: false,
       formFolderData: null,
@@ -136,6 +137,7 @@ export default {
     }
   },
   mounted() {
+    this.setupDeleteFolderAction()
     this.fetchFolders()
   },
   methods: {
@@ -194,6 +196,9 @@ export default {
           .catch((error) => {
             console.error('Error fetching folders:', error)
           })
+        // const response = await this.$apiClient.get('/folders');
+        // this.folders = response.data.data;
+        // console.log(response.data.data);
       } catch (error) {
         console.error('Unhandled error in fetchFolders:', error)
       }
@@ -222,7 +227,7 @@ export default {
                   )
 
                   if (subfolderIndex !== -1) {
-                    this.$set(this.selectedFolder.subfolders, subfolderIndex, updatedFolder)
+                    this.selectedFolder.subfolders.splice(subfolderIndex, 1, updatedFolder);
                   }
                 }
 
@@ -236,7 +241,7 @@ export default {
                       (subfolder) => subfolder.id === updatedFolder.id
                     )
                     if (folderIndex !== -1) {
-                      this.$set(this.parentFolder.subfolders, folderIndex, updatedFolder)
+                      this.parentFolder.subfolders.splice(folderIndex, 1, updatedFolder);
                     }
                   }
                 }
@@ -249,16 +254,34 @@ export default {
               console.error('Error updating folder:', error)
             })
         } else {
-          await this.$apiClient
+          const response = await this.$apiClient
             .post('/folders', {
               name: form.name,
               parent_id: form.parent_id
             })
-            .then((response) => {
-              console.log('Folder created successfully:', response.data)
-              this.showModal = false
-              this.fetchFolders()
-            })
+
+          const newFolder = response.data.data
+
+          if (this.selectedFolder) {
+            // If there is a selected folder, add new folder to its subfolders
+            if (!this.selectedFolder.subfolders) {
+              this.selectedFolder.subfolders = [];
+            }
+            this.selectedFolder.subfolders.push(newFolder);
+          } else if (this.parentFolder) {
+            // If there is a parent folder, add new folder to its subfolders
+            if (!this.parentFolder.subfolders) {
+              this.parentFolder.subfolders = [];
+            }
+            this.parentFolder.subfolders.push(newFolder);
+          } else {
+            // If no selected folder or parent folder, add to top-level folders
+            if (!this.folders) {
+              this.folders = [];
+            }
+            this.folders.push(newFolder);
+          }
+          
         }
         this.showModal = false
         this.fetchFolders()
@@ -269,36 +292,47 @@ export default {
       }
     },
     async deleteFolder(folder) {
+      event.preventDefault()
+
       if (confirm(`Apakah anda ingin menghapus folder ${folder.name} ?`)) {
         try {
-          await this.$apiClient
-            .delete(`/folders/${folder.id}`)
-            .then(() => {
-              console.log(`Folder ${folder.name} deleted successfully`)
+          await this.$apiClient.delete(`/folders/${folder.id}`);
 
-              if (this.selectedFolder && this.selectedFolder.id === folder.id) {
-                this.selectedFolder = null
-                this.parentFolder = null
-              }
+          console.log(`Folder ${folder.name} deleted successfully`);
 
-              this.folders = this.folders.filter((f) => f.id !== folder.id)
+          // Hapus folder dari daftar folder utama
+          this.folders = this.folders.filter((f) => f.id !== folder.id);
 
-              if (this.selectedFolder && Array.isArray(this.selectedFolder.subfolders)) {
-                this.selectedFolder.subfolders = this.selectedFolder.subfolders.filter(
-                  (subfolder) => subfolder.id !== folder.id
-                )
-              }
+          // Jika folder yang dipilih adalah folder yang dihapus
+          if (this.selectedFolder && this.selectedFolder.id === folder.id) {
+            this.selectedFolder = null;
+            this.parentFolder = null;
+          }
 
-              this.fetchFolders()
-            })
-            .catch((error) => {
-              console.error(`Error deleting folder ${folder.name}:`, error)
-            })
+          // Perbarui subfolders dari selectedFolder jika ada
+          if (this.selectedFolder && Array.isArray(this.selectedFolder.subfolders)) {
+            this.selectedFolder.subfolders = this.selectedFolder.subfolders.filter(
+              (subfolder) => subfolder.id !== folder.id
+            );
+          }
+
+          // Perbarui subfolders dari parentFolder jika ada
+          if (this.parentFolder && Array.isArray(this.parentFolder.subfolders)) {
+            this.parentFolder.subfolders = this.parentFolder.subfolders.filter(
+              (subfolder) => subfolder.id !== folder.id
+            );
+          }
+
+          this.fetchFolders()
+
         } catch (error) {
-          console.error('Error in deleteFolder:', error)
+          console.error(`Error deleting folder ${folder.name}:`, error);
         }
       }
-    }
+    },
+    setupDeleteFolderAction() {
+      this.deleteFolderAction = this.deleteFolder.bind(this)
+    },
   }
 }
 </script>
