@@ -21,8 +21,8 @@
           :folders="folders"
           :selectedFolder="selectedFolder"
           @select-folder="handleFolderSelect"
-          @deleteFolder="deleteFolder"
-          @editFolder="editFolder"
+          @delete-folder="deleteFolder"
+          @edit-folder="editFolder"
         />
       </div>
 
@@ -30,10 +30,20 @@
       <div class="lg:w-3/4 md:w-3/4 w-full p-4 ml-auto lg:mt-0">
         <div v-if="selectedFolder">
           <h3 class="text-xl font-semibold text-gray-800 mb-2">
-            {{ parentFolder?.name }} > {{ selectedFolder.name }}
+            <span v-for="(breadcrumb, index) in getBreadcrumbs()" :key="breadcrumb.id">
+              <a
+                v-if="index < getBreadcrumbs().length - 1"
+                @click="handleFolderSelect(breadcrumb)"
+                class="text-blue-600 cursor-pointer hover:underline"
+              >
+                {{ breadcrumb.name }}
+              </a>
+              <span v-else>{{ breadcrumb.name }}</span>
+              <span v-if="index < getBreadcrumbs().length - 1"> > </span>
+            </span>
             <button 
-            @click="openAddFolderModal('add', parentFolder)"
-            class="ml-2 bg-blue-500 text-white px-1 py-0.5 text-sm rounded shadow hover:bg-blue-600">
+              @click="openAddFolderModal('add', selectedFolder)"
+              class="ml-2 bg-blue-500 text-white px-1 py-0.5 text-sm rounded shadow hover:bg-blue-600">
               Add
             </button>
             <button
@@ -50,14 +60,14 @@
             </button>
           </h3>
           <p v-if="selectedFolder && selectedFolder.subfolders && selectedFolder.subfolders.length">
-            <ul class="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-4 gap-4 mt-5">
-              <li v-for="subfolder in selectedFolder.subfolders" :key="subfolder.id" class="bg-white text-center p-2 rounded-lg shadow-md border border-gray-200">
+            <ul class="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-4 gap-4 my-5">
+              <li v-for="subfolder in selectedFolder.subfolders" :key="subfolder.id" class="bg-white text-center p-4 rounded-lg shadow-md border border-gray-200">
                 <div>
                   <a 
                     @click="handleFolderSelect(subfolder)" 
                     class="font-medium text-blue-600 cursor-pointer"
                   >
-                  <font-awesome-icon :icon="['fas', 'folder']" />
+                    <font-awesome-icon :icon="['fas', 'folder']" />
                     {{ subfolder.name }}
                   </a>
                 </div>
@@ -80,6 +90,7 @@
           @select-folder="handleFolderSelect"
           @edit-folder="editFolder"
           @delete-folder="deleteFolder"
+          @open-add-folder="openAddFolderModal"
         />
       </div>
     </div>
@@ -128,19 +139,38 @@ export default {
     this.fetchFolders()
   },
   methods: {
+    findFolderById(id, folders) {
+      for (const folder of folders) {
+        if (folder.id === id) {
+          return folder;
+        }
+        if (folder.subfolders) {
+          const found = this.findFolderById(id, folder.subfolders);
+          if (found) return found;
+        }
+      }
+      return null;
+    },
+    getBreadcrumbs() {
+      const breadcrumbs = [];
+      let currentFolder = this.selectedFolder;
+      
+      while (currentFolder) {
+        breadcrumbs.unshift(currentFolder);
+        currentFolder = this.findFolderById(currentFolder.parent_id, this.folders);
+      }
+      
+      return breadcrumbs;
+    },
     handleFolderSelect(folder) {
       this.selectedFolder = folder
-      this.parentFolder = this.findParentFolder(folder)
-    },
-    findParentFolder(folder) {
-      return this.folders.find((f) => f.id === folder.parent_id) || null
+      this.parentFolder = this.findFolderById(folder.parent_id, this.folders);
     },
     openAddFolderModal(mode, folder) {
       if(mode == "add") {
         this.formFolderData = {
-          name: '',
           parent_id: folder ? folder.id : null,
-        };
+        };        
       } else {
         this.formFolderData = null
       }
